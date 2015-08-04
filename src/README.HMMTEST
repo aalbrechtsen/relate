@@ -1,0 +1,71 @@
+THIS file is obsolete,
+please use the attached pdf file called manual.pdf.
+This file is only kept for future reference
+
+Compiles and works with gcc version 4.2.3 on an ubuntu 8.04 64bit.
+
+Author: albrecht@binf.ku.dk
+programmer: thorfinn@binf.ku.dk
+
+
+date: 12. august 2008
+
+Program takes "all-pairs" output from HMMld-0.64.
+
+INSTALLATION:
+
+type make
+
+
+HOW TO RUN:
+Most likely command to use is
+
+./HMMtest -P thorfinn.post -p thorfinn.pos -D thorfinn.d -infer 1
+ 
+
+
+SYNTAX:
+./HMMtest -P POSTFILE [-p POSITIONFILE -D DISEASEFILE -c COVARFILE -X XMAXARRAY -o POSTFILEOUTPUT -file RESULTFILE -Nsim numperm -ccAll presume_missing -infer inferMissing -sig significans]
+
+
+
+FILEINPUT:
+
+-P postfile: tab sep file. 
+	Number of columns are number of snps. 
+	Each row is a hmmrelate run between different pairs of individuals
+
+-p positionfile: newline sep file. 
+	Number of positions should equal the number of SNP's.
+
+diseasefile: newline sep file. 
+	number of rows should be number of individuals.
+	1 represents an affected individual. 0 unaffected
+
+FILEOUTPUT:
+
+-c covariance:The calculated covariance matrix.
+
+-X xmax_array:Array of the best p value of each perm.
+
+-o postfile: posterioer file 
+
+-file: result file
+
+
+OPTIONS:
+
+
+
+-Nsim numperm: Number of permutations.
+
+
+
+-ccAll presume_missing: ccAll=0 strict;
+			ccAll=1 put NA in cases
+			ccAll=2 put NA in controls
+
+-infer infer_missing: Will remove the missing values in postfile, 
+		by infering them from neighbors.
+
+-sig significans: used by perm test.

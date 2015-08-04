@@ -1,0 +1,272 @@
+0.996
+april 25. 2012
+Tsk changed loading hook, such that it works in R 2.15.0
+
+0.995
+?
+
+0.994
+Changed default parameters
+
+0.992
+18 jan 2009
+added #include <stdio.h> for the newer versions of gcc
+
+
+0.99
+12 april
+This is a mostly a public release,
+the manual has been updated with the lates improvements.
+And some topics that was somewhat obscure has been clarified
+
+
+0.988 30. march 2009
+
+program will now dump the stripped datasets used in all pair analysis
+these are called stripped.* and keep.index.
+
+HMMtest has been somewhat updated such that intarrays and floatmatrix can now be VERY big
+using size_t instead of int.
+
+An option in HMMtest to only use snps at specified distances.
+like every 2. snp every 3. snp every third snp
+Argument is -every INT
+
+EXTRA  9. april 2009
+adding -out argument will now generate conform output names
+
+0.987
+Many bugfixes
+plink reading should work on large datasets,
+Futhermore the program should have a somewhat reasonable
+If the estimated 'a' is close enough with the alim borders the program will warn
+
+0.985  feb. 8 2009
+Theres an error in the plink dokumentation, concerning mapping of non-autosomales chromosomes.
+These are mapped as ints not chars. This is fixed
+
+positions are now checked for uniqueness
+
+a bug prevented genotypes datasets with NA's on first 2 loci
+   from beeing run in allpairs
+
+0.983
+a bug prevented chromosomes higher than 3 to be read from file
+
+
+
+0.982
+HMMtest has been revamped such that it compiles properly with the mingw compiler. apparantly strsep doesn't exist in mingw.
+
+
+0.98
+Hmmtest 0.73 now included in source dir.
+PACKAGE IS NOW CALLED Relate
+Futhermore explicit includes are now in every sourcefile
+A nice pdf manual describing the method is also included.
+
+0.971
+added test files and change some documentation stuff
+
+0.97
+added complete support for using plink binary files.
+
+
+0.961
+small bugfix when converting plink bed file.
+Reading has also been made more robust.
+(checks if values are between 0 and 3)
+
+0.96
+Can now run analysis on plink format directly from R.
+Program has been made much more user friendly,
+Program automaticly chooses fast version when running allpairs
+no more need for -choose and -d sets the fast version.
+back2 i also by default 2*back.
+And cannot be changed
+
+0.95
+Apparantly another bug was also introduced, DBL_MAX is not working,
+so a preprocessor macro is defined instead SYS_MAX in conf.h
+Also a version numbering VERSION is in conf.h
+
+
+0.94
+A bug was introduced in version 0.84, that caused all calculations to be wrong.
+it was a hidden typecasting from double to int in ldemmision2_new
+This should be fixed from this version.
+
+program can now read plink binary format with getPlink into R,
+option to call runHmmld with plink binary has not been implemented yet.
+
+
+0.93
+added queueing for running allpairs/ a joblist
+parameter given by -d 
+
+0.92
+Added sorting of input data given chromosome (both c/R)
+
+
+0.91
+fixed minor bug if r2=0 among the first 2 SNP
+changed stdout so program seems more responsive with larger datasets
+
+0.90
+code refactoring
+nothing should be changed otherwise
+
+0.89
+minor bugfixes
+program can now run back=0
+program now checks if back>0 when pruning
+no more mem leaks
+
+
+0.881
+added possibilty to change back2 from option file
+fixed bug preventing running cversion. (no back2 was initialized) 
+
+0.88
+fixed more memleaks, espciaccly from R
+added posibilty to give a back2 from R,
+function call now returns the global mea pba*
+
+0.87
+fixed mem-leaks
+add an extra back used for runned all pairs
+
+0.86
+added possibilty to run fast all pairs.
+
+
+0.85
+added new way of calculating single pair.
+This version will make allpairs much faster
+
+
+0.84
+Added support for microsoft visual c++ compiler v.15.00 cl.exe (windows)
+added support for intel compiler v.11 icc (windows)
+
+
+
+0.83
+changed commandline reading so only genotypes and positions are needed.
+fixed minor bug, telling the user, that noloci contained non-NA snps
+fixed parsing of optionsfile
+Alot more usefull output when run from commandline. Especially file IO,
+program tells if output filename has changed, because of file existence.
+
+Futhermore the filedumping of the posterier has been changed into 2 case:
+if fixk2=0 then only k1 will be dumped
+otherwise k1 and k2 will be dumped
+
+
+0.82
+Windows version implemented
+
+0.81
+added super all pairs(prerelease) -choose 0 or -choose 1 toggle new/old allpairs
+fixed ped/map  via snpMatrix method reading,
+
+
+0.802
+uint to unsigned int
+
+0.801
+fixed a bug when trying to allocate non-alloced memory when back=0. These should be no pba's when back=0.
+
+0.80
+Added allocation error message. Used if trying to allocate more memory than system has.
+More code refactoring.
+
+Started to implement turbo allpairs.
+NOT FINISHED yet.
+
+0.77
+code clean up.
+change hardcoding of eleborate output to runtime option -V int
+
+0.76
+gpl added as a license.
+small non used functions removed.
+
+0.75
+fixed chromosome stripping problem when calling program with pruning.
+
+
+0.74
+changed problem when min=0 was chosen.
+refactored the ld calculation subsystem.
+fixed parameter calculation
+fixed problem concerning optimization when no fix.k and calc.a was chosen
+
+0.73
+Implemented a general safeway of reading data.
+Implemented viterbi algoritm
+Pruning has been completely rewritten
+C-version now checks if pair to run analysis is within bounds of dataset.
+
+0.72
+Fastpruning now implemented
+
+0.71
+both C & R version
+Checks if individuals have atleast 1 non-missing loci.
+Fixed calculation of kr=k1/2 +k0
+C version
+Checks if genotype file only contains valid entrys, that s 0...3
+If calculate.a and fixk2=0 then force this one-dim to only run-once.
+
+0.70
+Now possible to calculate point likelighood
+
+
+0.69
+'The andersfix'
+Documentation has been made
+
+0.68
+fixed pruning
+fixed removing of snp outside a given tolerance 
+
+
+0.67
+No more error printing from faulty bfgs optimization
+screen output using allpairs option is fixed
+wrong interpretation of rsq and D in LD measurement fixed
+
+
+0.64
+Updated entire internal representation of char* to native string c++ stl style.
+Updated to R-2.7.1
+
+0.61
+added possibility to write post and k when doing single pair from c version
+added bugfix concerning LD and rsq2 option when running R version
+added bugfix when reading positionfile
+added bugfix with program returning non NULL chromosome list, when NULL chromosome list was given
+
+
+0.60
+nice reading of option file
+and parsing of commandlines implemented
+
+
+0.575
+This is a back fork!
+
+
+
+
+0.47
+minor bugs related to optimization parameters.
+LD='D' now works
+
+0.45 HMMld
+added all optimization parameters
+
+0.4 HMMld
+pruning implemented.
+new way of calculating genoerrors implmented

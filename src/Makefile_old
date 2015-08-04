@@ -1,0 +1,54 @@
+#Makefile for relateHMM 
+#author thorfinn@binf.ku.dk
+
+
+#program testet on gnu compilers
+CC=g++
+C=gcc
+
+
+
+#this is the flags used for dev.
+#flags=-ggdb -Wall -pedantic -ansi 
+
+#flags= -O2 -pg
+
+#this is the flag used for prod.
+flags=-O3
+
+all : relateHMM.o relateHMMRun HMMtest
+
+
+bfgs.o : bfgs.c bfgs.h types.h
+	$(C) -c -fPIC -std=gnu99 -O2  bfgs.c 
+
+alloc.o : alloc.h alloc.cpp types.h
+	$(CC) -c -fPIC   alloc.cpp ${flags}
+
+ld.o : ld.cpp ld.h types.h
+	$(CC)  -c -fPIC  ld.cpp ${flags}
+
+asort.o : asort.cpp asort.h types.h alloc.o
+	$(CC) -c asort.cpp ${flags}
+
+filereader_and_conversions.o : filereader_and_conversions.cpp filereader_and_conversions.h types.h
+	$(CC) -c filereader_and_conversions.cpp ${flags}
+
+extractors.o : extractors.cpp extractors.h types.h
+	$(CC) -c extractors.cpp ${flags}
+
+relateHMM.o:  relateHMM.cpp relateHMM.h ld.o alloc.o asort.o types.h filereader_and_conversions.o extractors.o
+	$(CC) -c -fPIC  relateHMM.cpp  ${flags}
+
+
+relateHMMRun : relateHMM.o runRelate.cpp relateHMM.o bfgs.o alloc.o ld.o asort.o filereader_and_conversions.o types.h extractors.o
+	$(CC) -o relateHMM runRelate.cpp asort.o relateHMM.o bfgs.o alloc.o ld.o filereader_and_conversions.o extractors.o ${flags}
+
+HMMtest : HMMtest.cpp alloc.o types.h
+	$(CC) -o HMMtest HMMtest.cpp alloc.o ${flags} 
+
+makeR: HMMld.cpp relateHMM.o bfgs.o ld.o 
+	R CMD SHLIB HMMld.cpp relateHMM.o bfgs.o alloc.o ld.o 
+
+clean:
+	rm  -f *.o  relateHMM Relate.so HMMtest

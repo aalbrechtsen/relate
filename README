@@ -1,0 +1,45 @@
+Relate 0.988 6 april 2009
+For Relate 0.988 the manual is still valid,
+but will be updated soon
+
+Relate 0.98 3-feb 2009
+
+users should refer the the manual.pdf in this directory.
+From this version on this  3-feb 2009
+users should refer the the manual.pdf in this directory.
+From this version on this README obsolete.
+
+For Relate 0.985 manual is still valid
+
+HMMLD 0.96
+
+
+HMMLD 0.77
+-------------------
+VERY IMPORTANT!
+If you output written to file you must supply -k and -post arguments
+-------------------
+
+
+C/C++ 
+---------------------------------------
+HOWTO: compile
+cd into src subdir,
+rename Makefile_old to Makefile
+type make
+---------------------------------------
+HOWTO: run
+
+Input files can be seperated by whitespace, tabs, colons, semicolons and comma.
+Furthermore the positionfile and chromosomefile can be seperated across multiple lines.
+
+inuputfiles:
+	genotype: 
+		number of rows is number of individuals
+		number of columns is number of SNP's. 0 is missing
+Program must be run with chromosome,postition and genotypes
+
+SYNTAX:
+./relateHMM -o OPTION -g GENOTYPES -p POSITIONS -c CHROMO -post POSTOUTPUT -k KOUTPUT -v VERBOSE -choose METHOD -d TESTINDIVIDUALS
+---------------------------------------
+check manual for details

@@ -1,0 +1,1498 @@
+/*
+  This is HMMtest part of relateHMM
+  last saved 25/03 2009  
+
+*/
+
+/*
+  Copyright (C) 2009 Thorfinn Sand Korneliussen  thorfinn@binf.ku.dk
+  
+  This file is part of Relate 0.98
+  
+  HMMld is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+  
+  Foobar is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+  
+  You should have received a copy of the GNU General Public License
+  along with HMMld.  If not, see <http://www.gnu.org/licenses/>.
+*/  
+
+/*
+ This file is just a fast smackdown of the method!
+
+ This source code is not up to my useal coding standard,
+ Actually I'm somewhat embarrased.
+
+ and if time permits, the code will be re-done
+ */
+
+
+#include <iostream>
+#include <fstream>
+#include <vector>
+#include <string>
+#include <cmath>
+#include <cstdlib>
+#include <cstring>
+#include <sstream>
+
+#ifndef _types_h
+#define _types_h
+#include "types.h"
+#endif
+
+#include "alloc.h"
+#include "conf.h"
+
+using namespace std;
+
+iArray *affectList = NULL;
+iArray *nonAffectList = NULL;
+iArray *permAffectList = NULL;
+iArray *permNonAffectList = NULL;
+//iArray *dFileList = NULL;
+iArray *indexList = NULL;
+iMatrix *indMatrix = NULL;
+
+fMatrix *post = NULL;
+fMatrix *covarMatrix = NULL;
+fArray *K = NULL;
+fArray *position = NULL;
+
+int n0,n1;
+
+
+
+///Converts a integer type to string.
+std::string to_string(int a){///@param a An integer to convert.
+  std::string str;
+  std::stringstream ss;
+  ss<<a;
+  if(!(ss>>str)){
+    printf("Error converting :%d will exit\n",a);
+    exit(0);
+  }
+  ss>>str;
+  return str; ///@return Returns the string value.
+}
+
+///Converts a string to integer type.
+int to_int(std::string a){///@param a a String to convert.
+  int str;
+  float check;
+  std::stringstream ss;
+  std::stringstream ss2;
+  ss<<a;
+  if(!(ss>>str)){
+    printf("Error converting :\"%s\" will exit\n",a.c_str());
+    exit(0);
+  }
+
+  //now check if numberis really an int
+  ss2<<a;
+  if(!(ss2>>check)){
+    printf("Error converting :\"%s\" will exit\n",a.c_str());
+    exit(0);
+  }
+
+  if(check!=str){
+    printf("String you want as in integer is not really an integer: \"%s\"\n",a.c_str());
+    puts("Just a warning");
+  }
+
+  return str;///@return Function returns the integer value.
+}
+
+///Convert string to float.
+float to_float(std::string a){///@param a is the string to convert.
+  float str;
+  std::stringstream ss;
+  ss<<a;
+  if(!(ss>>str)){
+    printf("Error converting :\"%s\" will exit\n",a.c_str());
+    exit(0);
+  }
+  ss>>str;
+  return str;///@return The float value.
+}
+
+///convert string to double
+double to_double(std::string a){///@param a is the string to convert.
+  double str;
+  std::stringstream ss;
+  ss<<a;
+  if(!(ss>>str)){
+    printf("Error converting :\"%s\" will exit\n",a.c_str());
+    exit(0);
+  }
+  ss>>str;
+  return str;///@return The double value.
+}
+
+
+
+
+void typecast_stringarray_to_fArray(const std::vector<std::string> &tokens,fArray *mat,int every){
+  for (unsigned int i=0;i<tokens.size();i+=every)
+    mat->array[i/every] = to_float( tokens.at(i));
+}
+
+void typecast_stringarray_to_fMatrix(const std::vector<std::string> &tokens,fMatrix *mat){
+  int start=0;
+  // printf("num element to typecast:%d\n",tokens.size());
+  fflush(stdout);
+  for (int i=0;i<mat->x;i++)
+    for(int j=0;j<mat->y;j++){
+      if((start%100000)==0){
+	printf("\r\t\t at:%d",start);
+	fflush(stdout);
+      }
+      mat->matrix[i][j] = to_float( tokens.at(start));
+      start++;
+    }
+}
+
+///Mother-of-all string tokenizers! Function will split a string from a given set of delimiters.
+int get_lexemes(std::string str,std::vector<std::string> &lexems,const std::string delims){
+  ///@param str The string to be splittet.
+  ///@param lexems A reference to a list of strings in which the splittet string will be put as seperate elements. A queue.
+  ///@param delims A string containing all the chars that the function will split by.
+  char *token = strtok( const_cast<char*>( str.c_str() ),delims.c_str());
+  int numToks = 0;
+  while ( token != NULL ){
+    numToks++;
+    lexems.push_back( token);
+    token = strtok( NULL,delims.c_str() );
+  }
+  return numToks;///@return The number of strings that has been splittet.
+}
+
+
+
+///Reads all lines in a file, splits it, and then input the values into the internal datastructure.
+fArray *readarray(std::string filename,const std::string delims=",;: \t",int every=1){
+  ///@param filename The name of the file to open.
+  ///@param delims A string of delimeters to split by.
+  std::vector<std::string> tokens;
+
+  const int SIZE=MAX_ELEMS_PER_LINE;
+  char buffer[SIZE];
+  std::ifstream pFile (filename.c_str(),std::ios::in);
+  
+  if(!pFile){
+    std::cout <<"Problems opening file" <<filename<<std::endl;
+    exit(0);
+  }
+  
+  std::string tmp_string;
+  //we are reading an array, so just keep reading until no more lines
+  while(!pFile.eof()){
+    pFile.getline(buffer,SIZE);
+    tmp_string = std::string(buffer);
+    get_lexemes(tmp_string,tokens,delims);
+    
+  }
+  pFile.close();
+  ///now we have a token array of string coerce the types now
+  //  std::cout <<"\n\ntoksize: " <<tokens.size()/every<<std::endl;
+
+
+  //
+
+
+  
+  fArray *ary;
+  int mods = (tokens.size() % every);
+  //  std::cout << "mods: " << mods <<std::endl;
+  if(mods==0)
+    ary = allocFloatArray(tokens.size()/every);
+  else
+    ary = allocFloatArray(tokens.size()/every+1);
+  
+  typecast_stringarray_to_fArray(tokens, ary,every);
+
+  return ary;
+}
+
+
+
+
+
+
+
+
+
+fMatrix *readmatrix(std::string filename,const std::string delim=",;: \t",int every=1){
+  ///@param filename A filename to read.@param delim A string of delimiters.
+  if(1){
+    printf("\t-> will try to open postfile: \"%s\" ... \n",filename.c_str());
+    fflush(stdout);
+  }
+  
+
+
+  const int SIZE = MAX_ELEMS_PER_LINE;
+  char buffer[SIZE];
+ 
+  std::ifstream pFile (filename.c_str(),std::ios::in);
+ 
+  
+  if(!pFile){
+    std::cout <<"Problems opening file" <<filename<<std::endl;
+    exit(0);
+  }
+  
+  
+  int doFirstRow =1;
+  int itemsInFirstRow=0;
+  int numRows =0;
+  printf("\t-> checking dims of posterior matrix file:\n");
+  while(!pFile.eof()){
+    
+    std::vector<std::string> tokens;
+    std::string tmp_string;
+
+    pFile.getline(buffer,SIZE);
+    tmp_string = std::string(buffer);
+    
+    if(doFirstRow){
+      //if file has a emptystart line
+      itemsInFirstRow = get_lexemes(tmp_string,tokens,delim);
+      
+      if (itemsInFirstRow==0)
+	continue;
+      // printf("items in first rwo:%d\n",itemsInFirstRow);
+      doFirstRow=0;
+      numRows++;
+    }
+    else{
+      int nItems = get_lexemes(tmp_string,tokens,delim);
+	//if line is empty
+	if(nItems==0)
+	  continue;
+	numRows++;
+	if(nItems!=itemsInFirstRow){
+	  printf("row length mismatch at line:%d numitems is:%d shouldn't be:%d\t will exit\n",numRows,itemsInFirstRow,nItems);
+	  exit(0);
+	}
+      }
+    if ((numRows%100 )==0){
+      printf("\r\t\tchecking number of items at line: %d ",numRows);
+      fflush(stdout);
+    }
+  }
+  pFile.close();
+  printf("\r\t-> File should contain numrows:%d\tnumitems:%d \n",numRows,itemsInFirstRow);
+
+  fflush(stdout);
+
+  float number_of_inds =sqrt(1+numRows*8);
+  if(floor(number_of_inds)!=ceil(number_of_inds)){
+    printf("\t-> Possible error in posterior file, number of pairs run doesn't divide to int\n");
+    exit(0);
+  }
+
+  fMatrix *mat;
+  int mods = (itemsInFirstRow % every);
+  //  std::cout << "mods: " << mods <<std::endl;
+  if (mods==0)
+    mat = allocFloatMatrix(numRows,itemsInFirstRow/every);
+  else
+    mat = allocFloatMatrix(numRows,itemsInFirstRow/every+1);
+  //  printf("allocing Fucking float matrix :%d\t:%d\t",numRows,itemsInFirstRow/every);
+  numRows = 0;
+
+  std::ifstream pFile2 (filename.c_str(),std::ios::in);
+  while(!pFile2.eof()){
+    if ((numRows%100 )==0){
+      printf("\r\t\t\treading in data at line: %d ",numRows);
+      fflush(stdout);
+    }
+    
+    std::vector<std::string> tokens;
+    std::string tmp_string;
+
+    pFile2.getline(buffer,SIZE);
+    tmp_string = std::string(buffer);
+
+    int itemsInRow = get_lexemes(tmp_string,tokens,delim);
+
+    if (itemsInRow==0)
+      continue; 
+    //printf("\nnumRows=%d\titemsInRow=%d\tevery=%d\ttoksize:%d\n",numRows,itemsInRow,every,(int)tokens.size());
+    for(unsigned int i=0; i <tokens.size();i+=every){
+      //      printf("%d=%d ",i/every,i);
+      mat->matrix[numRows][i/every] = to_float(tokens[i]);
+    }
+    
+    numRows++;
+  }
+
+  pFile2.close();
+  //copy(tokens.begin(), tokens.end(), ostream_iterator<string>(cout, ", "));
+  
+  fflush(stdout);
+
+  return mat;
+}
+
+
+
+
+
+
+/// Reads an entire file and returns a fMatrix.
+fMatrix *readmatrix_filthy_mem_user(std::string filename,const std::string delim=",;: \t"){
+  ///@param filename A filename to read.@param delim A string of delimiters.
+  if(1){
+    printf("\t-> will try to open postfile: \"%s\" ... \n",filename.c_str());
+    fflush(stdout);
+  }
+  
+
+
+  std::vector<std::string> tokens;
+
+  const int SIZE = MAX_ELEMS_PER_LINE;
+  char buffer[SIZE];
+ 
+  std::ifstream pFile (filename.c_str(),std::ios::in);
+ 
+  
+  if(!pFile){
+    std::cout <<"Problems opening file" <<filename<<std::endl;
+    exit(0);
+  }
+
+  
+  std::string tmp_string;
+  int doFirstRow =1;
+  int itemsInFirstRow=0;
+  int numRows =0;
+  while(!pFile.eof()){
+    pFile.getline(buffer,SIZE);
+    tmp_string = std::string(buffer);
+    
+    if(doFirstRow){
+      //if file has a emptystart line
+      itemsInFirstRow = get_lexemes(tmp_string,tokens,delim);
+      
+      if (itemsInFirstRow==0)
+	continue;
+      // printf("items in first rwo:%d\n",itemsInFirstRow);
+      doFirstRow=0;
+      numRows++;
+    }
+    else{
+      int nItems = get_lexemes(tmp_string,tokens,delim);
+	//if line is empty
+	if(nItems==0)
+	  continue;
+	numRows++;
+	if(nItems!=itemsInFirstRow){
+	  printf("row length mismatch at line:%d numitems is:%d shouldn't be:%d\t will exit\n",numRows,itemsInFirstRow,nItems);
+	  exit(0);
+	}
+      }
+    if ((numRows%100 )==0){
+      printf("\r\t\t\tat line: %d ",numRows);
+      fflush(stdout);
+    }
+  }
+  float number_of_inds =sqrt(1+numRows*8);
+  if(floor(number_of_inds)!=ceil(number_of_inds)){
+    printf("\t-> Possible error in posterior file, number of pairs run doesn't divide to int\n");
+    exit(0);
+  }
+
+  fMatrix *mat = allocFloatMatrix(numRows,itemsInFirstRow);
+  //now we have a token array of string coerce the types now
+  printf("\ntypecasting\t and has alloc a mat of sise:(%d,%d)\n",numRows,itemsInFirstRow);
+
+  typecast_stringarray_to_fMatrix(tokens,mat);
+  //copy(tokens.begin(), tokens.end(), ostream_iterator<string>(cout, ", "));
+  printf("typecats\n");
+  fflush(stdout);
+  return mat;
+}
+
+
+
+
+
+
+void write_matrix(const char* str,fMatrix *mat){
+  ofstream myfile;
+  myfile.open (str);
+  for(int i=0;i<mat->x;i++){
+    for(int j=0;j<mat->y-1;j++)
+      myfile <<mat->matrix[i][j]<<" ";
+    myfile <<mat->matrix[i][mat->y-1]<<"\n";
+  }
+  myfile.close();
+}
+
+
+
+void write_array(const char* str,fArray *ary){
+  ofstream myfile;
+  myfile.open (str);
+  for(int i=0;i<ary->x-1;i++)
+    myfile <<ary->array[i]<<"\t";
+  myfile <<ary->array[ary->x-1]<<"\n";
+  
+  myfile.close();
+}
+
+
+
+void generate_affectLists(iArray *boolList){
+
+  int len=0;//affectlist
+  int len2=0;//nonaffectlist
+  for (int i=0;i<indMatrix->x;i++){
+    if(boolList->array[i]==1){
+      affectList->array[len] = i;
+      len++;
+    }
+    else if (boolList->array[i]==2) {
+      nonAffectList->array[len2] = i;
+      len2++;
+    }
+  }
+
+}
+
+
+
+int fileExists(const char *pName){
+  ifstream pFile (pName);
+  if(!pFile)
+    return 0;
+  return 1;
+}
+
+
+fMatrix *getCoVar(const char *pName) {
+  if(1){
+    printf("\t-> Will try to open: \"%s \" ...",pName);
+    fflush(stdout);
+  }
+  
+  int ind=0;
+  int snp=0;
+  fMatrix *data;
+  //change
+  const int SIZE=MAX_ELEMS_PER_LINE;
+  char buffer[SIZE];
+  char *buffer_ar;
+  ifstream pFile (pName);
+  
+  if(!pFile){
+    cout <<"file doesn't exists will exit:" <<pName<< endl;
+    exit(0);
+  }
+
+  while(!pFile.eof()){
+    pFile.getline(buffer,SIZE);
+    char *tokenized=buffer;
+    buffer_ar = strtok(tokenized," ");
+    if (ind==0)
+      while (buffer_ar!=NULL ){
+	snp++;
+	buffer_ar = strtok(NULL, " ");
+      }
+    ind++;
+  }
+  ind--;
+  pFile.close();
+  
+  data = allocFloatMatrix(ind,snp);
+  double inDataSet;
+  ifstream pFile1 (pName);
+  
+
+
+  for (int i=0;i<ind;i++) {
+    pFile1.getline(buffer,SIZE);
+    char *tokenized=buffer;
+    //loop throug each colomn
+    buffer_ar = strtok(tokenized," ");
+    int s=0;
+    while (buffer_ar!=NULL ){
+      
+      if (strcmp(buffer_ar,"NA")==0){
+	inDataSet = -1;
+      }
+      else
+	inDataSet = atof(buffer_ar);
+      data->matrix[i][s]=inDataSet;
+      buffer_ar = strtok(NULL, " ");
+      s++;
+    }
+  }
+  pFile1.close();
+  if(1){
+    printf("done reading dims=(%d,%d)\n",data->x,data->y);
+  }
+  return data;
+  
+}
+
+
+
+void fix_missing(){
+  printf("\n\t-> Will infer missing values in posterier matrix...");
+  fArray *difPos = allocFloatArray(position->x);
+
+  //calculate differences in position;
+  //  cout<<"npos="<<position->x<<endl;
+  for(int i=1;i<position->x;i++){
+    difPos->array[i-1]=position->array[i]-position->array[i-1];
+    //    cout<<difPos->array[i-1]<<endl;
+  }
+  //print_array(difPos->array,difPos->x);
+  
+  float dif1=0;
+  float dif2=0;
+  float difSum=0;
+  int numberOfMissing=0;
+  float firstNonMissing =0;
+  float nextNonMissing =0;
+
+  /*
+    ok, this is what happens,
+    we need to remove all NA / -1's,
+    for each row 
+     1. check from the left weather the first elem is NA
+     2. check from the right weather the last elem is NA
+     3. run through entire row 
+  */
+  
+ 
+  for(int i=0;i<post->x;i++) {
+
+    // 1.
+    if(post->matrix[i][0]==-1){
+      numberOfMissing =1;
+      while(post->matrix[i][numberOfMissing]==-1 && (numberOfMissing)<post->y)
+	numberOfMissing++;
+      nextNonMissing = post->matrix[i][numberOfMissing];
+      for(int j=0;j<numberOfMissing;j++)
+	post->matrix[i][j] = nextNonMissing;
+    }
+    
+    numberOfMissing = 0;
+    nextNonMissing = 0;
+    firstNonMissing =0;
+    // 2.
+    if(post->matrix[i][post->y-1]==-1){
+      //      cout <<"hit"<<endl;
+      numberOfMissing =1;
+      while(post->matrix[i][post->y-1-numberOfMissing]==-1 && numberOfMissing<post->y)
+	numberOfMissing++;
+      //cout <<"\t ->2. number of missing:"<<numberOfMissing <<endl;
+      nextNonMissing = post->matrix[i][post->y-1-numberOfMissing];
+      //cout <<"\t ->3. nextNonMissing:"<<nextNonMissing<<endl;
+      for(int j=0;j<numberOfMissing;j++)
+	post->matrix[i][post->y-1-j] = nextNonMissing;
+    }
+
+    numberOfMissing = 0;
+    nextNonMissing = 0;
+    firstNonMissing =0;
+    // 3. Anders much
+    for(int j=1;j<post->y-1;j++){
+        if (post->matrix[i][j]==-1){
+
+	firstNonMissing = post->matrix[i][j-1];
+        nextNonMissing= post->matrix[i][j+1];
+        dif2 = difPos->array[j+1];
+	int o=1;
+	while(nextNonMissing==-1){
+	  o++;
+          dif2 =+ difPos->array[j+o];
+	  nextNonMissing = post->matrix[i][j+o];
+	  
+	  if(o>100000)
+	    cout<<"You are so screwed!"<<endl;
+	}
+	  dif1 = difPos->array[j-1];
+	
+	  difSum = dif1+dif2;
+
+	  float tmp1 = (dif1/difSum)*firstNonMissing;
+	  float tmp2 = (dif2/difSum)*nextNonMissing;
+	  //    cout<<"tmp1="<<tmp1<<" tmp2="<<tmp2<<endl;
+	  //            cout<<"dif1="<<dif1<<" dif2="<<dif2<<endl;
+
+	  if(dif1<0){  //anders
+	    tmp1=0;
+            tmp2=nextNonMissing;
+	    //	    cout<<tmp2<<endl;
+	  }
+          else if(dif2<0){  //anders
+	    tmp2=0;
+            tmp1=firstNonMissing;
+	    //  cout<<tmp1<<endl;
+	  }
+          if(dif1<0&&dif2<0)
+	    cout<<"another function error"<<endl;
+	   
+	  post->matrix[i][j] =tmp1  + tmp2;
+          if(post->matrix[i][j]<0&&post->matrix[i][j+numberOfMissing]!=-1){
+            cout<<"fucked"<<endl;
+            cout<<"tmp1="<<tmp1<<" tmp2="<<tmp2<<endl;
+            cout<<"dif1="<<dif1<<" dif2="<<dif2<<endl;
+	  }
+	}
+
+      }
+    
+
+
+  }
+  printf(" done\n");
+  killArray(difPos);
+
+}
+
+fArray *getPosition1(char *pName,int every){
+  return readarray(string(pName),";: \t",every);
+
+}
+fMatrix *getPost1(char *pName,int every){
+  return readmatrix(string(pName),";: \t",every);
+  
+}
+fArray *getKthorfinn(const char *pName, int isK0){
+  fArray *kFromfile = readarray(string(pName),";: \t",1);
+  //now post process the k's
+  if(isK0!=0)
+    for (int i=0 ; i<kFromfile->x ;i++)
+      kFromfile->array[i] =1 -kFromfile->array[i];
+  return kFromfile;
+}
+
+/// checks if cmpVar exists in ary.
+int exists(int cmpVar, iArray *ary){
+  for(int i=0;i<ary->x;i++)
+    if(cmpVar==ary->array[i])
+      return 1;
+  return 0;
+}
+
+
+
+void getCaseList(char *pName, int ccAll){
+  std::vector<std::string> tokens;
+
+  const int SIZE=MAX_ELEMS_PER_LINE;
+  char buffer[SIZE];
+  std::ifstream pFile (pName,std::ios::in);
+  
+  if(!pFile){
+    std::cout <<"Problems opening file" <<pName<<std::endl;
+    exit(0);
+  }
+  
+  std::string tmp_string;
+  //we are reading an array, so just keep reading until no more lines
+  while(!pFile.eof()){
+    pFile.getline(buffer,SIZE);
+    tmp_string = std::string(buffer);
+    get_lexemes(tmp_string,tokens,";,: \t");
+    
+  }
+  pFile.close();
+  ///now we have a token array of string coerce the types now
+
+  iArray *dFileList=allocIntArray(tokens.size());
+  for (int i=0 ; i < dFileList->x ; i++){ //changed per anders request
+    int tmp = to_int( tokens.at(i));
+    if(tmp)
+      dFileList->array[i] = 0;
+    else
+      dFileList->array[i] = 1;
+  }
+  
+
+  int len=0;//this is the number  of affected individuals
+  int len2=0;//this is the number of non-affected individuals.
+  for(int i=0;i<dFileList->x;i++)
+    if(dFileList->array[i]==1)
+      len++;
+    else if(dFileList->array[i]!=-1)//these should be discarded
+      len2++;
+  int len3 = dFileList->x - len  - len2;
+  printf("(%d,%d,%d)\n",len,len2,len3);
+  n1 = len;
+  n0 = len2;
+
+  //now create an array of length=len that contains id of affected individuals
+  iArray *idList = allocIntArray(len); //list of ids of affected individuals
+  iArray *discardList = allocIntArray(len3); //list of ids that shouldn't be used in analysis.
+  len=0;
+  len3=0;
+  for(int i=0;i<dFileList->x;i++){
+    if(dFileList->array[i]==1){
+      idList->array[len]=i;
+      len++;
+    }
+    if(dFileList->array[i]==-1){
+      //cout << "hit:"<<i<<"\n";
+      discardList->array[len3]=i;
+      len3++;
+    }
+  }
+  //  print_array(discardList);
+  //this makes the famous list matrix
+  //length is length of dfile multiplied by length minus one halfs
+  indMatrix = allocIntMatrix((dFileList->x*(dFileList->x-1))/2,2);
+  int xvar=0;
+  int yvar=0;
+  for(int i=0;(i<dFileList->x-1 &&xvar<indMatrix->x);i++)
+    for(int j=i+1;j<dFileList->x;j++){
+      indMatrix->matrix[xvar][yvar] = i;
+      yvar++;
+      indMatrix->matrix[xvar][yvar] = j;
+      xvar++;
+      yvar=0;
+    }
+  
+  /*
+  //print indMatrix
+  for(int i=0;i<indMatrix->x;i++)
+    printf("%d\t%d\n",indMatrix->matrix[i][0],indMatrix->matrix[i][1]);
+  */
+  //now checks which rows that contains dlb affected individuals
+
+  indexList = allocIntArray(indMatrix->x);
+  len=0;
+  len2=0;
+  len3 =0 ;
+  for(int i=0;i<indMatrix->x;i++)
+    if((exists(indMatrix->matrix[i][0],idList)) && (exists(indMatrix->matrix[i][1],idList))){
+      indexList->array[i] = 1;
+      len++;
+    }
+    else if((exists(indMatrix->matrix[i][0],discardList)) || (exists(indMatrix->matrix[i][1],idList))){
+      indexList->array[i] = -1;
+      //len2++;
+    }
+    else if(!(exists(indMatrix->matrix[i][0],idList)) && !(exists(indMatrix->matrix[i][1],idList))){
+      indexList->array[i] = 2;
+      len2++;
+    }
+    else{
+      len3++;
+    }
+  
+  //cout <<"\nlen:"<<len <<"\tlen2:"<<len2<<"\tlen3:"<<len3<<endl;
+  //the rest of elems in indexList must be the mixed ones
+  //put these in appropiate lists
+  if(ccAll==2){//this is missing in nonAffectList
+    for(int i=0;i<indexList->x;i++)
+      if(indexList->array[i]==0){
+	indexList->array[i] = 2;
+	len2++;
+      }
+  }
+  else if (ccAll==1)//this is missing in affectList
+    for(int i=0;i<indexList->x;i++)
+      if(indexList->array[i]==0){
+	indexList->array[i]=1;
+	len++;
+      }
+  //print_array(boolList->array,boolList->x);
+
+  affectList = allocIntArray(len);
+  nonAffectList = allocIntArray(len2);
+
+  len=0;//affectlist
+  len2=0;//nonaffectlist
+  generate_affectLists(indexList);
+  if(0){
+    affectList->print("affectedlist",NULL);
+    nonAffectList->print("non affect list",NULL);
+  }
+  printf("\n\t-> n=%d,\tn0=%d,\tn1=%d\t,numCases=%d,\tnumControls:%d\n",dFileList->x,n0,n1,affectList->x,nonAffectList->x);
+  killArray(idList);
+  killArray(dFileList);
+  killArray(discardList);
+}
+
+float get_mean(fArray *ary,iArray *extractList){
+  float tmpSum=0;
+  float result;
+  for (int i=0;i<extractList->x;i++){
+    // printf("ary->array[extractList->array[i]]:%f\n",ary->array[extractList->array[i]]);
+    tmpSum += ary->array[extractList->array[i]];
+  }
+  result = tmpSum/extractList->x;
+  return result;
+}
+
+float covar_no_missing_k1(fMatrix *post,fArray *K,int tal1,int tal2){
+  float tmpSum=0;
+  float result=0;
+  for (int i=0;i<post->y;i++){
+    tmpSum += (post->matrix[tal1][i] -K->array[tal1])*(post->matrix[tal2][i] -K->array[tal2]);
+  }
+  result = tmpSum/(post->y-1.0);
+  //printf("res is:%f\n",result);
+  return result;
+}
+
+float covar_with_missing_k1(fMatrix *post,fArray *K,int tal1,int tal2){
+  int m=0;
+  float tmpSum=0;
+  float result=0;
+  for (int i=0;i<post->y;i++){
+    if(post->matrix[tal1][i]!=-1&&post->matrix[tal2][i]!=-1){
+    tmpSum += (post->matrix[tal1][i]-K->array[tal1])*(post->matrix[tal2][i] - K->array[tal2]);
+    m++;
+    }
+  }
+  result = tmpSum/(float(m)-1.0);
+  //cout << "m="<<m<<"\tresult="<<result<<endl;
+  return result;
+}
+
+
+
+
+
+fMatrix *calculateCoVar(int missingExists) {
+  fMatrix *retMat = NULL;
+  if(missingExists==0){
+    cout <<"\n\t-> Calculating covariance matrix...\n\t  presuming K list is K1, and no missing exists"<<endl;
+    
+    retMat = allocFloatMatrix(post->x,post->x);
+    //exit(0);
+    //float tmpSum=0;
+    for (int i=0;i<retMat->x;i++){//N //ask anders,
+      for (int j=i;j<retMat->x;j++){//m
+	//  printf("\t->i=%d\tj=%d\t",i,j);U<-apply(post[cases,],2,mean,na.rm=T)
+	retMat->matrix[i][j] = covar_no_missing_k1(post,K,i,j);
+	retMat->matrix[j][i] = retMat->matrix[i][j];
+	
+      }
+    }
+  }
+  else if(missingExists==1){
+    cout <<"\n\t-> Calculating covariance matrix...\n\t  presuming K list is K1, and  missing exists"<<endl;
+    retMat = allocFloatMatrix(post->x,post->x);
+    
+    //float tmpSum=0;
+    for (int i=0;i<retMat->x;i++){//N
+      for (int j=i;j<retMat->x;j++){//m
+	//  printf("\t->i=%d\tj=%d\t",i,j);U<-apply(post[cases,],2,mean,na.rm=T)
+	retMat->matrix[i][j] = covar_with_missing_k1(post,K,i,j);
+	retMat->matrix[j][i] = retMat->matrix[i][j];
+	
+      }
+    }
+  }
+  else
+    cout<<"error "<<endl;
+  cout <<"done"<<endl;  
+  return retMat;
+}
+
+fArray *column_wise_mean_no_missing(fMatrix *post,iArray *extractList){
+  fArray *retAry = allocFloatArray(post->y);
+  float tmpSum=0;
+  for (int i=0;i<post->y;i++){
+    tmpSum=0;
+    for(int j=0;j<extractList->x;j++)
+      tmpSum += post->matrix[extractList->array[j]][i];
+    retAry->array[i] = tmpSum/(float)extractList->x;
+  }
+  return retAry;
+}
+
+fArray *column_wise_mean_with_missing(fMatrix *post,iArray *extractList){
+  fArray *retAry = allocFloatArray(post->y);
+  float tmpSum=0;
+  for (int i=0;i<post->y;i++){
+    tmpSum=0;
+    int iNotMissing=0;
+    for(int j=0;j<extractList->x;j++)
+      if(post->matrix[extractList->array[j]][i] != -1){
+	iNotMissing++;
+	tmpSum += post->matrix[extractList->array[j]][i];
+      }
+    retAry->array[i] = tmpSum/(float)iNotMissing;
+  }
+  return retAry;
+}
+
+
+/*
+  calculates rowwise mean
+ */
+fArray *row_wise_mean_no_missing(fMatrix *post,iArray *extractlist){
+  //  std::cout << "\nrow_wise_mean_\n";
+  fArray *retAry = allocFloatArray(post->x);
+  float tmpSum=0;
+  for (int i=0;i<post->x;i++){
+    tmpSum=0;
+    for(int j=0;j<post->y;j++)
+      tmpSum += post->matrix[i][j];
+    retAry->array[i] = tmpSum/(float)post->y;
+    //    std::cout<<retAry->array[i]<<std::endl;
+  }
+  return retAry;
+}
+fArray *row_wise_mean_with_missing(fMatrix *post,iArray *extractlist){
+  fArray *retAry = allocFloatArray(post->x);
+  float tmpSum=0;
+  for (int i=0;i<post->x;i++){
+    tmpSum=0;
+    int iNotMissing=0;
+    for(int j=0;j<post->y;j++)
+      if(post->matrix[i][j]!=-1){
+	tmpSum += post->matrix[i][j];
+	iNotMissing++;
+      }
+    retAry->array[i] = tmpSum/(float)iNotMissing;
+  }
+  return retAry;
+}
+
+
+
+float sum_of_covar_matrix(fMatrix *mat,iArray *okList){
+  float returnValue=0;
+
+  for (int i=0;i<okList->x;i++)
+    for (int j=0;j<okList->x;j++)
+      returnValue += mat->matrix[okList->array[i]][okList->array[j]];
+  return returnValue;
+}
+
+void make_datastructures(functionPars2 *pars){
+  cout<<"\t-> Getting post file... ";
+  
+  post = getPost1(pars->postFileName,pars->every);
+  /*
+  for(int i=0;i<post->x;i++){
+    for(int j=0;j<post->y;j++)
+      printf("%f ",post->matrix[i][j]);
+    puts("");
+  }
+  */
+
+  //positions might exist
+  if(pars->posFileName != NULL){
+    //cout<<"getting position file"<<endl;
+    position = getPosition1(pars->posFileName,pars->every);
+    //    for(int i=0;i<position->x;i++) printf("%f ",position->array[i]);
+    if(post->y!=position->x){
+      printf("\t-> Number of SNP's in posteroir file is different from positionfile %d!=%d ...will exit",post->y,position->x);
+      exit(0);
+    }
+
+  }
+
+
+  //check if we should fix missing  
+  if(pars->infer==1&&pars->posFileName!=NULL){
+    fix_missing();
+    pars->missingExists =0;//after  infering the missing values, no more missing values exists;
+    if(pars->dumpPostFileName!=NULL){
+      printf("\t-> Will dump infered posterier matrix in file: %s",pars->dumpPostFileName);
+      write_matrix(pars->dumpPostFileName,post);
+      cout<<" done "<<endl;
+    }
+  
+  }
+  else if(pars->infer==1&&pars->posFileName==NULL) {
+    printf("\n\t-> Position file required for removing missing \n");
+    exit(0);
+  }
+
+  //get list of affected and un affected individuals;
+
+  if (pars->dFileName != NULL){
+      getCaseList(pars->dFileName,pars->ccAll);
+    
+ }
+ 
+  else {
+    //generate affect list
+
+    affectList = allocIntArray(post->x);
+    
+    for(int i=0;i<post->x;i++)
+      affectList->array[i]=i;
+    
+//    printf("\t-> n=%d,\tn0=%d,\tn1=%d\t,numCases=%d,\tnumControls:%d\n",dFileList->x,n0,n1,affectList->x,nonAffectList->x);
+    printf("n=%d (presumes all individuals are affected)\n",post->x); //screen output
+    //generated dFile list;
+    indexList = allocIntArray((unsigned long int)(post->x*((unsigned long int)post->x-1))/2);
+
+    //  exit(0);
+    for(int i=0;i<5;i++)
+      indexList->array[i]=1;
+  }
+  //printf("af.len:%d\n",affectList->x);
+
+  //if we were given a kfilename then read it
+  if(!pars->kFileName.empty()){
+    K = getKthorfinn(pars->kFileName.c_str(),pars->isK0);
+  }
+  else{
+    printf("\t-> Calculating the expected allele sharing... ");
+    if(pars->missingExists==0)
+      K = row_wise_mean_no_missing(post,affectList);//second arg. doesn't matter shit
+    else
+      K = row_wise_mean_with_missing(post,affectList);//second arg doesn't matter shit
+    printf(" done \n");
+
+  }
+}
+
+double d_uniform_01 ( int *seed ){
+  int k;
+  double r;
+  k = *seed / 127773;
+  *seed = 16807 * ( *seed - k * 127773 ) - k * 2836;
+  if ( *seed < 0 )
+    *seed = *seed + 2147483647;
+  r = ( double ) ( *seed ) * 4.656612875E-10;
+  return r;
+}
+
+
+int i_uniform ( int b, int c, int *seed ){
+  int i;
+  i = b + ( int ) ( d_uniform_01 ( seed ) * ( double ) ( c + 1 - b ) );
+  if ( i < b )
+    i = b;
+  if ( c < i )
+    i = c;
+  return i;
+}
+void i_swap ( int *i, int *j ){
+  int k;
+  k = *i;
+  *i = *j;
+  *j = k;
+  return;
+}
+
+
+
+int *perm_uniform ( int n, int *seed ){
+  int i;
+  int j;
+  int *p;
+  p = new int[n];
+  for ( i = 1; i <= n; i++ )
+  {
+    p[i-1] = i;
+  }
+  for ( i = 1; i <= n; i++ )
+  {
+    j = i_uniform ( i, n, seed );
+    i_swap ( &p[i-1], &p[j-1] );
+  }
+  return p;
+}
+
+
+
+void permutate_dFileList(){
+  iArray *permlist = allocIntArray(n1);
+  int *perm;
+  int new_seed = rand();
+  int len=0;
+  int len2=0;
+  perm = perm_uniform (n0+n1, &new_seed);
+  for(int i=0;i<n1;i++)  
+    permlist->array[i]=perm[i]-1;   
+
+  for(int i=0;i<indMatrix->x;i++){
+    if((exists(indMatrix->matrix[i][0],permlist)) && (exists(indMatrix->matrix[i][1],permlist))){
+      indexList->array[i] = 1;
+      len++;
+    }
+    else if(!(exists(indMatrix->matrix[i][0],permlist)) && !(exists(indMatrix->matrix[i][1],permlist))){
+      indexList->array[i] = 2;
+      len2++;
+    }
+    else
+      indexList->array[i] = 0;
+  }
+  //  print_array(indexList->array,indexList->x);
+  //  print_array(permlist->array,permlist->x);
+  //  killArray(indexList);
+  generate_affectLists(indexList);
+  //    print_array(nonAffectList->array,nonAffectList->x);
+    //   print_array(affectList->array,affectList->x);
+  killArray(permlist);
+  delete[] perm;
+}
+
+
+fArray *fArray_plus_float(fArray *ary,float a){
+  fArray *retVal = allocFloatArray(ary->x);
+  for(int i=0;i<ary->x;i++)
+    retVal->array[i]=ary->array[i]+a;
+  return retVal;
+}
+
+fArray *fArray_minus_fArray(fArray *ary1,fArray *ary2){
+  fArray *retVal = allocFloatArray(ary1->x);
+  for(int i=0;i<ary1->x;i++)
+    retVal->array[i]=ary1->array[i]-ary2->array[i];
+  return retVal;
+}
+
+
+
+void fArray_div(fArray *ary,float a){
+  for(int i=0;i<ary->x;i++){
+    //printf("\t\t dividing:%f\t with %f\n",ary->array[i],a);
+    ary->array[i]=ary->array[i]/a;
+  }
+}
+
+float getMax_elem(fArray *ary){
+  float result = ary->array[0];
+  for (int i=1;i<ary->x;i++){
+    if (ary->array[i]>result)
+      result = ary->array[i];
+  }
+  return result;
+}
+
+//memory stabil sort,
+//O(n^2) complxity
+void sort(fArray *ary){
+  float swap;
+  float lowest_value;
+  for (int j=0;j<ary->x;j++){
+    lowest_value = ary->array[j];
+    for(int i=j;i<ary->x;i++){
+      if (ary->array[i]<ary->array[j]){
+	swap = ary->array[i];
+	ary->array[i] = ary->array[j];
+	ary->array[j] = swap;
+      }
+    }
+  }
+}
+
+void uber_main(functionPars2 *pars) {
+  
+  //printf("pars missingExists:%d\n",pars->missingExists);
+  //initialize datastructures
+  make_datastructures(pars);
+  //printf("pars missingExists:%d\n",pars->missingExists);
+  //calculate covariance matrix;
+  string covarFileName =string( pars->cFileName);
+  if(pars->kFileName.empty())
+    covarFileName =covarFileName + ".E1.txt";
+  else
+    covarFileName =covarFileName + ".E2.txt";
+  
+  if (fileExists(covarFileName.c_str())==0){
+    printf("\t-> Calculating the covariance matrix - may take several minutes ... ");
+    fflush(stdout);
+    covarMatrix = calculateCoVar(pars->missingExists);
+    if(pars->cFileName.compare("")){
+      printf("\t->Will dump calculated covariance matrix in file: %s",covarFileName.c_str());
+      write_matrix(covarFileName.c_str(),covarMatrix);
+      cout<<" done"<<endl;
+    }
+  }
+  else{
+    printf("\t-> Will read covariance matrix from file - may take several minutes ... \n");
+    covarMatrix = getCoVar(covarFileName.c_str());
+  }
+  if(covarMatrix->x!=covarMatrix->y||covarMatrix->x!=post->x){
+    printf("\t-> Dimension of covariate matrix doesn't equal dimension of posterior matrix\n");
+    exit(0);
+  }
+  
+  //get_column_wise mean
+  fArray *U;
+  if(pars->missingExists)
+    U = column_wise_mean_with_missing(post,affectList);
+  else
+    U = column_wise_mean_no_missing(post,affectList);
+  //cout <<"________________this is U_______________"<<endl;
+  //print_array(U);
+  
+  float mn = get_mean(K,affectList);
+  //cout <<"mean :" << mn <<endl;// 0.74
+  fArray *Z = fArray_plus_float(U,-mn);
+  float sumCovar = sum_of_covar_matrix(covarMatrix,affectList)/((affectList->x)*(affectList->x));
+  //  cout << "sumCovar:" <<sumCovar<<endl; 0.73
+  float bottom = sqrt(sumCovar);
+  //  cout << "bottom:" <<bottom<<endl; 0.73
+  fArray_div(Z,bottom);
+  //cout <<"________________this is Z_______________"<<endl;
+  //print_array(Z);
+  //cout <<"________________this is affect_______________"<<endl;
+  //print_array(affectList);
+ 
+  if(pars->design==1){    
+    write_array(pars->outFileName.c_str(),Z);
+  }
+  else if(pars->dFileName!=NULL) {
+    printf("\t->Will start case control analays\n");
+    //do perm test
+    fArray *U1 = NULL;
+    fArray *U0 = NULL;
+    iArray *psim = allocIntArray(post->y); //iterative resulthulder
+    fArray *rowMax = allocFloatArray(pars->nSim);//iteratie resultholder
+    
+    //for(int i=0;i<K->x;i++)  printf("%f ",K->array[i]);
+   float mn1 = get_mean(K,affectList);
+   float mn0 = get_mean(K,nonAffectList);
+   //cout<<mn0<<" "<<mn1<<endl;
+   if(pars->missingExists){
+     U1 = column_wise_mean_with_missing(post,affectList);
+     U0 = column_wise_mean_with_missing(post,nonAffectList);
+   }else{
+     U1 = column_wise_mean_no_missing(post,affectList);
+     U0 = column_wise_mean_no_missing(post,nonAffectList);
+   }
+    fArray *Z1 = fArray_plus_float(U1,-mn1);
+    fArray *Z0 = fArray_plus_float(U0,-mn0);
+    if(0){
+      U1->print("\t-> This is U1 inX0",NULL);
+      U0->print("\t-> This is U0 inX0",NULL);
+    }
+    float varU1 = sum_of_covar_matrix(covarMatrix,affectList)/((affectList->x)*(affectList->x));//number of non -missing affected anders
+    float varU0 = sum_of_covar_matrix(covarMatrix,nonAffectList)/((nonAffectList->x)*(nonAffectList->x));//number if non missin affected anders
+    float bottom= sqrt((((nonAffectList->x-1)*varU0+(affectList->x-1)*varU1)/(nonAffectList->x+affectList->x-2)) * (1.0/float(nonAffectList->x)+1.0/float(affectList->x)));
+    fArray *X0 = fArray_minus_fArray(Z1,Z0);
+    if(0){
+      X0->print("\n-> This is U1 - U0 inX0",NULL);
+    }
+    fArray_div(X0,bottom);
+    write_array(pars->outFileName.c_str(),X0); //anders
+    if(0){
+      X0->print("this is bottom value\n\t-> This is X0",NULL);
+    }
+
+    killArray(U1);
+    killArray(U0);
+    killArray(Z1);
+    killArray(Z0);
+    //each ieration
+    printf("\t->Will start permutations\n");
+srand ( time(NULL) );
+    rowMax->array[0] = getMax_elem(X0);
+    for (int i=1;i<pars->nSim;i++){
+      if((i%10)==0){
+	printf("\r\t\t Has Run: %d permutations",i);
+	fflush(stdout);
+      }
+      permutate_dFileList();
+      
+      mn1 = get_mean(K,affectList);
+      mn0 = get_mean(K,nonAffectList);
+      // cout<<mn0<<" "<<mn1<<endl;
+      if(pars->missingExists){
+	U1 = column_wise_mean_with_missing(post,affectList);
+	U0 = column_wise_mean_with_missing(post,nonAffectList);
+      }else{
+	U1 = column_wise_mean_no_missing(post,affectList);
+	U0 = column_wise_mean_no_missing(post,nonAffectList);
+      }
+      fArray *Z1 = fArray_plus_float(U1,-mn1);
+      fArray *Z0 = fArray_plus_float(U0,-mn0);
+      varU1 = sum_of_covar_matrix(covarMatrix,affectList)/((affectList->x)*(affectList->x));//affected only
+      varU0 = sum_of_covar_matrix(covarMatrix,nonAffectList)/((nonAffectList->x)*(nonAffectList->x)); //affected only
+      bottom= sqrt((((nonAffectList->x-1)*varU0+(affectList->x-1)*varU1)/(nonAffectList->x+affectList->x-2)) * (1.0/float(affectList->x)+1.0/float(nonAffectList->x)));
+
+      fArray *Xi = fArray_minus_fArray(Z1,Z0);
+      fArray_div(Xi,bottom);
+      if(0){
+	Xi->print("\n\t-> Xi",NULL);
+      }
+      //do psum check
+
+      for(int j=0;j < psim->x;j++){
+	if(Xi->array[j] >= X0->array[j])
+	  psim->array[j] = psim->array[j]+1;	 
+	
+      } 
+      //get max_elem
+      rowMax->array[i] = getMax_elem(Xi);
+      killArray(U1);
+      killArray(U0);
+      killArray(Z1);
+      killArray(Z0);
+      killArray(Xi);
+    }
+    printf("\n");
+    // after all perms
+
+    if(pars->xFileName.compare("")){
+      printf("\t->Will dump Xmax array in file: %s\n",pars->xFileName.c_str());
+      write_array(pars->xFileName.c_str(),rowMax);
+    }
+    
+    float pmaxsim =1;
+    for (int i=1;i<rowMax->x;i++)
+      if(rowMax->array[0] <= rowMax->array[i])
+	pmaxsim++;
+    pmaxsim = pmaxsim/pars->nSim;
+    printf("\t->pmaxsim:%f\n",pmaxsim);
+    float psimVar=0;
+    for (int i=0;i<psim->x;i++)
+      psimVar += psim->array[i];
+    sort(rowMax);
+    int indexToGet = round((1-pars->sig)*rowMax->x)-1;
+    printf("\t->psim/nsim:%f",psimVar/(float)pars->nSim);
+    //    printf("\t->indexToGet from rowMax array :%d\tpsigsim:%f\n",indexToGet,rowMax->array[indexToGet]); 0.73
+    printf("\t\tpsigsim:%f\n",rowMax->array[indexToGet]); //COKE ROX
+
+    killArray(psim);
+    killArray(rowMax);
+    killArray(X0);
+  }
+  else
+    printf("\t->dFile required for case controll design\n");
+ 
+  //print_matrix(indMatrix);
+  
+  killMatrix(post);
+  killMatrix(covarMatrix);
+  killArray(K);
+  killArray(affectList);
+  killArray(nonAffectList);
+  killArray(U);
+  //  killArray(dFile);
+  killMatrix(indMatrix);
+  killArray(indexList);
+  killArray(Z);
+  if(pars->posFileName!=NULL)
+    killArray(position);
+}
+
+
+
+void print_functionPars2(functionPars2 *pars){
+  printf("_________________________\n");
+  printf("required:\t\t\t\tDefaultValue\n");
+  printf("\t-P\t:Posterier Matrix\t%s\n",pars->postFileName);
+  printf("\t-p\t:position file\t\t%s\n",pars->posFileName);  
+  printf("options:\n");
+  //  printf("\t-K\t%s\t\t :(or -K0) \n",pars->kFileName.c_str());//chg 6/1 2009
+  printf("\t-D\t:Individuals to test\t%s\n",pars->dFileName);
+  //  printf("\t-d\t%d\t\t\t :1: affecteed only, 2: case control\n",pars->design); //chg 6/1 2009
+  printf("\t-Nsim\t:number of permutions\t%d\n",pars->nSim);
+  printf("\t-ccAll\t:ccAll=0 strict,\t%d\n\t\t:ccAll=2 NA in controls,\n\t\t:ccAll=1 NA in cases \n",pars->ccAll);
+  printf("\t-sig\t:significans\t\t%f\n",pars->sig);
+  printf("\t-infer\t:infer=1 infer missing\t%d\n",pars->infer);
+  printf("\t-every\t:=2 use every 2.snp\t%d\n",pars->every);
+  //  printf("\t-NA\t%d\t\t\t :NA=1 Missing exists in posterier\n",pars->missingExists);
+  printf("outfiles:\n");
+  printf("\t-c\t:dump covariance matrix\t%s\n",pars->cFileName.c_str());
+  printf("\t-x\t:dump Xmax array\t%s\n",pars->xFileName.c_str());
+  printf("\t-o\t:dump posterior file\t%s\n",pars->dumpPostFileName);
+  printf("\t-f:output file\t\t%s\n",pars->outFileName.c_str());
+  printf("_________________________\n");  
+  
+}
+
+int main(int argc,char *argv[]){
+
+  //init default pars
+  functionPars2 *pars = new functionPars2();
+  pars->postFileName = NULL;//"sam_trans_post_all_hap.txt";
+  //  pars->kFileName = ""; //"k_all_hap.txt";
+  pars->cFileName = "";//"covar.txt"; //"k_all_hap.txt";
+  pars->xFileName = "x.txt"; //"k_all_hap.txt";
+  pars->dFileName = NULL;
+  pars->posFileName = NULL;
+  pars->dumpPostFileName = NULL;
+  pars->outFileName = "stat.txt";
+  pars->design = 2;//chg 6/1 2009
+  pars->nSim = 10;
+  pars->ccAll = 0;
+  pars->sig = 0.05;
+  pars->infer = 1; //chg 6/1 2009
+  pars->missingExists =1; 
+  pars->every = 1;
+  //now get commandline args;
+  if (argc<3){
+    printf("-------------------------------\nHMMtest 0.74 \nMust supply atleast 2 args.\n");
+    print_functionPars2(pars);
+    delete pars;
+    return 0;
+  }
+  
+  string arg;
+  for (int i=1;i<argc;i+=2){
+    arg=argv[i];
+    if (arg.compare("-P")==0)
+      pars->postFileName=argv[i+1];
+    else if(arg.compare("-K0")==0){
+      pars->kFileName=argv[i+1];
+      pars->isK0 = 1;
+    }
+    else if(arg.compare("-K")==0){
+      pars->kFileName=argv[i+1];
+      pars->isK0 = 0;
+    }
+    else if(arg.compare("-c")==0)
+      pars->cFileName=argv[i+1];
+    else if(arg.compare("-x")==0)
+      pars->xFileName=argv[i+1];
+    else if(arg.compare("-o")==0)
+      pars->dumpPostFileName=argv[i+1];
+    else if(arg.compare("-p")==0)
+      pars->posFileName=argv[i+1];
+    else if(arg.compare("-D")==0)
+      pars->dFileName=argv[i+1];
+    else if(arg.compare("-f")==0)
+      pars->outFileName=argv[i+1];
+    else if(arg.compare("-d")==0)
+      pars->design=atoi(argv[i+1]);
+    else if(arg.compare("-Nsim")==0)
+      pars->nSim=atoi(argv[i+1]);
+    else if(arg.compare("-every")==0)//added 30 march 2009 0.988
+      pars->every=atoi(argv[i+1]);
+
+    /*//chg 6/1 2009
+    else if(arg.compare("-NA")==0){
+      pars->missingExists=atoi(argv[i+1]);
+      printf("missingExists args is:%d\n",pars->missingExists);
+    }
+    */
+    else if(arg.compare("-sig")==0)
+      pars->sig=atoi(argv[i+1]);
+    else if(arg.compare("-infer")==0)
+      pars->infer=atoi(argv[i+1]);
+    else if(arg.compare("-ccAll")==0)
+      pars->ccAll=atoi(argv[i+1]);
+    
+    else{
+      printf("\t\tUnknow argument \t%s\n\t\tWill exit now\n",argv[i]);
+      exit(0);
+    }
+  }
+    
+  
+  print_functionPars2(pars);
+  
+  uber_main(pars);
+
+  delete pars;
+  return 0;
+}

@@ -1,0 +1,11 @@
+Package: Relate
+Type: Package
+Title: HMMld finds pairwise relatedness
+Version: 0.9992
+Date: 2012-25-4
+Author: Albrechtsen/sand
+Maintainer: Who to complain to <albrecht@binf.ku.dk>
+Description: Finding IBD tracts
+Depends: R(>= 2.6.0), methods
+License: GPL (might be artistic also),
+Packaged: 2014-05-21 18:53:34 UTC; software
