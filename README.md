@@ -41,7 +41,7 @@ then build and install
 
 ```
 R CMD build relate
-R CMD INSTALL Relate_<add appropreate version number>.tar.gz
+R CMD INSTALL Relate_<add version number>.tar.gz
 ```
 
 
