@@ -33,7 +33,7 @@ type
 
 If you do not have the devtools package (and dont want to install it) then you will have to build the R package 
 
-first download the code
+first download the code (you need to have a clean version without the compiled c++ code)
 ```
 git clone https://github.com/aalbrechtsen/relate.git
 ```
