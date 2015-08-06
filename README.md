@@ -43,3 +43,21 @@ then build and install
 R CMD build relate
 R CMD INSTALL Relate_<add appropreate version number>.tar.gz
 ```
+
+
+# getting started
+
+ * The manual can be found on the wiki [http://www.popgen.dk/software/index.php/Relate]
+
+### in R
+```
+library(Relate)
+example(relate)
+```
+
+### C++ from commandline
+```
+./relateHMM
+```
+ 
+
