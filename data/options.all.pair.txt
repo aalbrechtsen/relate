@@ -1,0 +1,27 @@
+1	#1=allpairs	0=normal run
+0	#pair[0]	
+1	#pair[1]
+0	#double recombination
+0 	#LD=0=rsq2	LD=1=D //allright everythings gone be allright
+0.01  	#	min
+0.001	# alim[0]
+1.0	# alim[1]
+0	# doParameter calculation (pars)
+0.3	# par[0] = a  this is only used if doParameter is set to 1
+0.25	#par[1] = k2 this is only used if doParameter is set to 1
+0.5	#par[2] = k1 this is only used if doParameter is set to 1
+1	#ld_adj
+0.01	# epsilon
+5	# back
+0 	# doPrune
+0.2	# prune_value
+0	# fixA
+0.0	# fixA_value
+0	# fixK2
+0.0	# fixk2_value
+1	# calculateA
+0.013	# phi_value if genetic distances are used set to 0.01
+0.1	# convergence_tolerance
+3	# times_to_converge
+8	# times_to_run
+100 	# back2
