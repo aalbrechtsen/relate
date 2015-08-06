@@ -3,7 +3,7 @@ This method estimates the probability of sharing alleles identity by descent (IB
 
 The method is implemented in an R package and as a commandline based C++ program embeded in the R package. The R code can be used to find and visualize the tracts of relatedness between a pair of individuals. The commandline version has under 20% of the running time when running all pairs compared to a single pair, it however has the the same speed for running a single pair analysis. For analysis linkage only the C++ version is implemented.
 
-
+![figure](http://www.popgen.dk/software/images/e/e2/Relate.png)
 
 # Install
 ### R package using devtools
