@@ -57,7 +57,17 @@ example(relate)
 
 ### C++ from commandline
 ```
-./relateHMM
+./src/relateHMM
+
+#standard input format, single individuals
+./src/relateHMM -o data/options.single.pair.txt -g data/dat_small.geno -p data/dat_small.pos -c data/dat_small.chr 
+
+#standard input format, multiple individuals
+./src/relateHMM -o data/options.all.pair.txt -g data/dat_small.geno -p data/dat_small.pos -c data/dat_small.chr -d data/dat_small.keep
+
+#plink input format
+./src/relateHMM -o data/options.single.pair.txt -plink data/500
+
 ```
  
 
