@@ -37,7 +37,12 @@ first download the code (you need to have a clean version without the compiled c
 ```
 git clone https://github.com/aalbrechtsen/relate.git
 ```
-then build and install
+
+```
+R CMD build relate
+```
+
+or  build and install
 
 ```
 R CMD build relate
