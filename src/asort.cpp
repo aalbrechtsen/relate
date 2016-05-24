@@ -13,6 +13,12 @@
 #include "alloc.h"
 #endif
 
+#ifndef exit
+#include <cstdlib>
+#endif
+
+
+
 struct dats{
   int chr;
   double pos;
