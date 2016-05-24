@@ -1,5 +1,6 @@
 #include<algorithm>
 #include<vector>
+#include <cstdlib>
 
 //contains all the type definition
 #ifndef _types_h
@@ -13,9 +14,6 @@
 #include "alloc.h"
 #endif
 
-#ifndef exit
-#include <cstdlib>
-#endif
 
 
 
